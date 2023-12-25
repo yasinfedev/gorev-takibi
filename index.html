@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <link rel="stylesheet" href="lib/style.css">
+    <script src="lib/script.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css"
+        integrity="sha384-xOolHFLEh07PJGoPkLv1IbcEPTNtaed2xpHsD9ESMhqIYd0nLMwNLD69Npy4HI+N" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To Do App</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #fff;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        #app {
+            text-align: center;
+            max-width: 800px;
+            width: 90%;
+            margin: 50 auto;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        input[type="text"] {
+            width: 80%;
+            padding: 8px;
+            margin-right: 8px;
+        }
+
+        button {
+            padding: 8px;
+            cursor: pointer;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        li {
+            background-color: #fff;
+            margin: 8px 0;
+            padding: 8px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .delete-button {
+            background-color: #dc3545;
+            color: #fff;
+            border: none;
+            padding: 6px 12px;
+            cursor: pointer;
+        }
+
+        .edit-button {
+            background-color: #ffc107;
+            color: #000;
+            border: none;
+            padding: 6px 12px;
+            cursor: pointer;
+        }
+
+        .done-checkbox {
+            transform: scale(1.5);
+            margin-right: 8px;
+        }
+
+        .done-task {
+            background-color: powderblue !important;
+        }
+
+        .task-info {
+            font-size: 12px;
+            color: #777;
+        }
+
+        .progress-container {
+            margin-top: 20px;
+            text-align: left;
+        }
+
+        @media (max-width: 600px) {
+            input[type="text"] {
+                width: 100%;
+                margin-right: 0;
+            }
+        }
+
+        .card {
+          margin-top: 50px;
+          margin-bottom: 50px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="card" id="app">
+        <div class="card-header">
+            <h2>Görev Takibi</h2>
+            <hr>
+            <div class="alert alert-primary" role="alert">
+                Lütfen aşağıdaki kutuya görevi yazıp EKLE butonuna ya da ENTER tuşuna basınız.
+            </div>
+            <div class="card-body">
+
+                <form class="form-group">
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control" placeholder="Yapılacak bir şey ekleyin..." id="taskInput"  onkeypress="handleKeyPress(event)">
+                        <div class="input-group-append">
+                            <button class="btn btn-success" type="button" id="button-addon2" onclick="addTask()">Ekle</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="alert alert-warning" role="alert">
+                Görevler, son görev en sonda olacak şekilde aşağıda listelenecektir.
+                Görev tamamlandığında kutucuğa tıklayabilirsiniz.
+            </div>
+            <h5>İş Listesi</h5>
+            <hr>
+            <div class="progress-container">
+                <strong>İlerleme durumu:</strong>
+                <div class="progress">
+                    <div class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0"
+                        aria-valuemax="100">0%
+                    </div>
+                </div>
+            </div><hr>
+            <div class="alert alert-danger" role="alert" id="undoAlert" style="display: none;">
+        Görev silindi!
+        <button type="button" class="btn btn-warning btn-sm" onclick="undoDelete()">Geri Al</button>
+    </div>
+            <ul id="taskList">
+                <!-- Eklenen görevler buraya listelenecek -->
+            </ul>
+            <hr>
+        <p><small><b>Kodlama ve tasarım:</b> Yasin YILDIZ | @yasinfedev</small></p>    
+        </div>
+        
+    </div>
+
+    
+
+    <script>
+        // Sayfa yüklendiğinde Local Storage'dan verileri al
+        let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                addTask();
+            }
+        }
+
+        // Ekleme işlemi
+        function addTask() {
+            const taskInput = document.getElementById('taskInput');
+            const taskText = taskInput.value.trim();
+
+            if (taskText !== '') {
+                tasks.push({
+                    text: taskText,
+                    done: false,
+                    timestamp: new Date().toLocaleString() // Eklenme tarihi ve saati
+                });
+                updateTasksAndDisplay();
+                taskInput.value = '';
+            }
+        }
+
+        // Görevleri Local Storage'a kaydet ve listeleme işlemi
+        function updateTasksAndDisplay() {
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+            displayTasks();
+            updateProgress();
+        }
+
+        // Görevleri listeleme işlemi
+        function displayTasks() {
+            const taskList = document.getElementById('taskList');
+            taskList.innerHTML = '';
+
+            tasks.forEach((task, index) => {
+                const listItem = document.createElement('li');
+                listItem.className = task.done ? 'done-task' : ''; // Eğer görev tamamlandıysa sınıf ekleyin
+
+                const buttonsDiv = document.createElement('div');
+                buttonsDiv.className = 'buttons';
+
+                const doneCheckbox = document.createElement('input');
+                doneCheckbox.type = 'checkbox';
+                doneCheckbox.checked = task.done;
+                doneCheckbox.className = 'done-checkbox';
+                doneCheckbox.onchange = () => toggleDone(index);
+
+                buttonsDiv.appendChild(doneCheckbox);
+
+                const taskText = document.createElement('span');
+                taskText.textContent = task.text;
+
+                const taskInfo = document.createElement('span');
+                taskInfo.className = 'task-info';
+                taskInfo.textContent = task.timestamp;
+
+                listItem.appendChild(taskText);
+                listItem.appendChild(taskInfo);
+
+                const deleteButton = document.createElement('button');
+                deleteButton.textContent = 'Sil';
+                deleteButton.className = 'delete-button';
+                deleteButton.onclick = () => deleteTask(index);
+
+                const editButton = document.createElement('button');
+                editButton.textContent = 'Düzenle';
+                editButton.className = 'edit-button';
+                editButton.onclick = () => editTask(index);
+
+                buttonsDiv.appendChild(deleteButton);
+                buttonsDiv.appendChild(editButton);
+
+                listItem.appendChild(buttonsDiv);
+
+                taskList.appendChild(listItem);
+            });
+        }
+
+        // Silme işlemi
+        function deleteTask(index) {
+            // Silinen görevi yedekle
+            const deletedTask = tasks.splice(index, 1)[0];
+
+            updateTasksAndDisplay();
+            updateProgress();
+
+            // Geri alma butonunu göster
+            showUndoAlert(deletedTask);
+        }
+
+        // Geri alma işlemi
+        function undoDelete() {
+            // Silinen görevi geri al
+            const lastDeletedTask = getLastDeletedTask();
+            if (lastDeletedTask) {
+                tasks.push(lastDeletedTask);
+                updateTasksAndDisplay();
+                updateProgress();
+
+                // Geri alma butonunu gizle
+                hideUndoAlert();
+            }
+        }
+
+        // Silinen son görevi alma
+        function getLastDeletedTask() {
+            return localStorage.getItem('lastDeletedTask') ?
+                JSON.parse(localStorage.getItem('lastDeletedTask')) :
+                null;
+        }
+
+        // Silinen görevi geri alma butonunu göster
+        function showUndoAlert(deletedTask) {
+            const undoAlert = document.getElementById('undoAlert');
+            undoAlert.style.display = 'block';
+
+            // Silinen görevi localStorage'a kaydet
+            localStorage.setItem('lastDeletedTask', JSON.stringify(deletedTask));
+
+            // Belirli bir süre sonra geri alma butonunu gizle
+            setTimeout(() => hideUndoAlert(), 5000);
+        }
+
+        // Geri alma butonunu gizle
+        function hideUndoAlert() {
+            const undoAlert = document.getElementById('undoAlert');
+            undoAlert.style.display = 'none';
+
+            // Silinen görevi localStorage'dan temizle
+            localStorage.removeItem('lastDeletedTask');
+        }
+
+        // Düzenleme işlemi
+        function editTask(index) {
+            const updatedTask = prompt('Yeni görevi girin:', tasks[index].text);
+
+            if (updatedTask !== null) {
+                tasks[index].text = updatedTask;
+                updateTasksAndDisplay();
+            }
+        }
+
+        // Tamamlandı işareti işlemi
+        function toggleDone(index) {
+            tasks[index].done = !tasks[index].done;
+            updateTasksAndDisplay();
+        }
+
+        // Progress barı güncelleme işlemi
+       function updateProgress() {
+    const totalTasks = tasks.length;
+    const completedTasks = tasks.filter(task => task.done).length;
+    
+    // NaN kontrolü ekleniyor
+    const progressPercentage = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
+
+    const progressBar = document.querySelector('.progress-bar');
+    progressBar.style.width = `${progressPercentage}%`;
+    progressBar.textContent = `${Math.round(progressPercentage)}%`;
+}
+
+        // Başlangıçta Local Storage'dan alınan görevleri görüntüleme
+        displayTasks();
+        updateProgress();
+    </script>
+
+</body>
+
+</html>
